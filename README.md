@@ -20,6 +20,16 @@ ccgui-asm-bridge/
 └── build/mcpd          # (generated) static binary, no dependencies
 ```
 
+## Demo
+
+Live MCP session against the assembly server (`127.0.0.1:7341`):
+
+![MCP handshake and tool registry](docs/screenshots/01-handshake.png)
+
+![Permission gate: /tmp rewritten, /etc blocked](docs/screenshots/02-policy-gate.png)
+
+![Policy-gated exec: allowed run and blocked-argument refusal](docs/screenshots/03-exec.png)
+
 ## Quick start
 
 ```bash

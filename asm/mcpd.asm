@@ -84,7 +84,7 @@ section .data
     tl_a: db '{"tools":[{"name":"bridge.echo","description":"Echo back the arguments object","inputSchema":{"type":"object"}},',0
     tl_b: db '{"name":"bridge.identity","description":"Report server identity and configuration","inputSchema":{"type":"object"}},',0
     tl_c: db '{"name":"bridge.policy_check","description":"Permission gate ported from ai-bridge permission-safety.js: tmp-path rewrite, root containment, dangerous-path screen","inputSchema":{"type":"object","required":["path"],"properties":{"path":{"type":"string"}}}},',0
-    tl_d: db '{"name":"bridge.exec","description":"Execute a command with every argument passed through the permission gate","inputSchema":{"type":"object","required":["cmd"],"properties":{"cmd":{"type":"string"},"args":{"type":"array","items":{"type":"string"}}}}}]}',0
+    tl_d: db '{"name":"bridge.exec","description":"Execute a command with every argument passed through the permission gate","inputSchema":{"type":"object","required":["command"],"properties":{"command":{"type":"string"},"args":{"type":"array","items":{"type":"string"}}}}}]}',0
 
     ; ---- errors / verdicts ----
     e_parse:    db "Parse error",0
