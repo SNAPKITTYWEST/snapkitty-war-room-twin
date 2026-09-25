@@ -1,0 +1,298 @@
+OMMERCIAL LICENSE AGREEMENT (DRAFT TEMPLATE)
+==============================================
+
+STATUS: NON-BINDING DRAFT TEMPLATE -- NOT AN EXECUTED AGREEMENT
+-----------------------------------------------------------------
+
+This document is a **draft template** for a commercial license
+agreement. It is provided to describe, in outline, the subjects a
+commercial license for this software is expected to cover. It is
+**not itself a license, an offer, or a binding contract**, and no one
+may rely on it as granting any right to use, copy, modify, or
+distribute this software.
+
+Every bracketed placeholder below (`[LIKE THIS]`) marks a term that is
+still to be negotiated and filled in on a signed, executed agreement
+between the copyright holder and a specific commercial licensee. This
+template has not been reviewed or approved by qualified legal counsel
+for use as-is, and should be reviewed by counsel for both parties
+before any version of it is signed.
+
+Absent a signed agreement in this form (or a materially similar one)
+between you and the copyright holder, your use of this repository's
+source code is governed solely by the GNU Affero General Public
+License v3.0 in `LICENSE-AGPL`.
+
+To begin a commercial licensing discussion, contact:
+
+- **Primary licensing contact:** Jessica -- Jessica@collectivekitty.com
+- **Technical architect:** Ahmed Parr -- Ahmedparr93@gmail.com
+
+
+TEMPLATE TEXT BEGINS BELOW
+-----------------------------------------------------------------
+
+# Commercial License Agreement
+
+This Commercial License Agreement ("**Agreement**") is entered into as
+of [EFFECTIVE DATE] ("**Effective Date**") between:
+
+- **Licensor:** ERRANT DIGITAL INSTITUTE OF TECHNOLOGY (SEIT NGO) %
+  SNAPKITTY COLLECTIVE, operating under the "SnapKitty Collective"
+  brand, with an address at 1974 Union Street, San Francisco, CA
+  94123, United States ("**Licensor**"); and
+- **Licensee:** [LICENSEE LEGAL NAME], a [LICENSEE ENTITY TYPE AND
+  JURISDICTION] with an address at [LICENSEE ADDRESS] ("**Licensee**").
+
+Licensor and Licensee are each a "**Party**" and together the
+"**Parties**."
+
+## Recitals
+
+WHEREAS Licensor develops and maintains the software identified in
+Exhibit A (the "**Software**"), and makes it available under the GNU
+Affero General Public License v3.0 ("**AGPLv3**");
+
+WHEREAS Licensee wishes to use, deploy, modify, and/or distribute the
+Software in a manner that the AGPLv3 does not permit without also
+being bound by its copyleft and source-disclosure obligations;
+
+WHEREAS Licensor is willing to grant Licensee a separate commercial
+license to the Software on the terms below, in exchange for the
+consideration described in this Agreement;
+
+NOW, THEREFORE, the Parties agree as follows.
+
+## 1. Definitions
+
+- **"Software"** means the source code identified in Exhibit A, and
+  any Licensor-provided updates delivered under Section 6.
+- **"Documentation"** means Licensor's user and technical
+  documentation for the Software.
+- **"Authorized Use"** means the specific scope of use, deployment,
+  and distribution granted in Exhibit B.
+
+## 2. Grant of License
+
+### 2.1 Commercial deployment and internal enterprise use
+
+Subject to Licensee's compliance with this Agreement and payment of
+the fees in Section 5, Licensor grants Licensee a
+[EXCLUSIVE/NON-EXCLUSIVE], non-transferable (except as permitted under
+Section 12) license during the Term to install, deploy, and use the
+Software for Licensee's internal business operations and/or in
+Licensee's commercial products or services, as further specified in
+Exhibit B.
+
+### 2.2 Modification
+
+Licensee [MAY / MAY NOT, SUBJECT TO [CONDITIONS]] modify the Software,
+provided that any modifications are used solely within the scope of
+Authorized Use and remain subject to this Agreement.
+
+### 2.3 Redistribution and sublicensing
+
+Licensee [MAY / MAY NOT] redistribute the Software, in original or
+modified form, to third parties, [ONLY AS INCORPORATED INTO
+LICENSEE'S PRODUCT AND NOT AS STANDALONE SOURCE / SUBJECT TO THE
+FOLLOWING ADDITIONAL TERMS: [TERMS]]. Licensee [MAY / MAY NOT]
+sublicense the rights granted here to [AFFILIATES / CUSTOMERS /
+CONTRACTORS], subject to [CONDITIONS].
+
+### 2.4 SDK/API integration and proprietary integrations
+
+Licensee may integrate the Software with Licensee's proprietary
+software, SDKs, and APIs, and may keep such integrations proprietary
+and confidential, provided that the integration does not itself
+incorporate Software source code beyond what is licensed under Section
+2.1-2.3.
+
+### 2.5 Reservation of rights
+
+All rights not expressly granted in this Agreement are reserved by
+Licensor. This Agreement does not grant any trademark license; see
+Section 10.
+
+## 3. Enterprise Deployment Terms
+
+[Describe any deployment-scale-specific terms: number of
+instances/seats/environments, production vs. non-production
+environments, cloud vs. on-premises deployment, multi-tenant
+restrictions, etc. -- TO BE NEGOTIATED.]
+
+## 4. Support and Maintenance; Updates
+
+### 4.1 Support
+
+[Licensor will / will not] provide support for the Software under this
+Agreement. If support is provided, its scope, response times, and any
+separate support fee schedule are set out in Exhibit C. [TO BE
+NEGOTIATED.]
+
+### 4.2 Updates
+
+[Licensor will / will not] make new versions of the Software available
+to Licensee during the Term. [Updates are included in / billed
+separately from the fees in Section 5.] [TO BE NEGOTIATED.]
+
+## 5. Fees
+
+Licensee shall pay Licensor [FEE STRUCTURE: e.g., a one-time license
+fee of $[AMOUNT], and/or recurring fees of $[AMOUNT] per
+[MONTH/YEAR/SEAT/INSTANCE]], payable [PAYMENT TERMS]. [TO BE
+NEGOTIATED.]
+
+## 6. Warranty Disclaimer
+
+EXCEPT AS EXPRESSLY STATED IN [SECTION/EXHIBIT, IF ANY], THE SOFTWARE
+IS PROVIDED "AS IS," WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT. [ADDITIONAL OR
+NARROWER WARRANTY LANGUAGE, IF ANY, TO BE NEGOTIATED AND REVIEWED BY
+COUNSEL.]
+
+## 7. Limitation of Liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO EVENT SHALL
+EITHER PARTY BE LIABLE FOR ANY INDIRECT, INCIDENTAL, SPECIAL,
+CONSEQUENTIAL, OR PUNITIVE DAMAGES, OR FOR ANY LOSS OF PROFITS, DATA,
+OR BUSINESS, ARISING OUT OF OR RELATED TO THIS AGREEMENT, REGARDLESS OF
+THE THEORY OF LIABILITY. EACH PARTY'S TOTAL LIABILITY UNDER THIS
+AGREEMENT SHALL NOT EXCEED [LIABILITY CAP, e.g., THE FEES PAID BY
+LICENSEE IN THE [12] MONTHS PRECEDING THE CLAIM]. [TO BE NEGOTIATED AND
+REVIEWED BY COUNSEL -- liability caps and carve-outs vary significantly
+by jurisdiction and deal.]
+
+## 8. Indemnification
+
+[Describe which Party indemnifies the other, and for what: e.g.,
+Licensor indemnifies Licensee against third-party IP-infringement
+claims arising from the unmodified Software; Licensee indemnifies
+Licensor against claims arising from Licensee's modifications, misuse,
+or integration of the Software. Include standard indemnification
+procedure (notice, control of defense, cooperation). TO BE NEGOTIATED
+AND REVIEWED BY COUNSEL.]
+
+## 9. Intellectual Property Ownership
+
+Licensor retains all right, title, and interest in and to the
+Software, the Documentation, and all associated intellectual property
+rights, including any modifications made by or for Licensee to the
+extent they constitute derivative works of the Software. [Ownership of
+Licensee's independent, separable integrations/proprietary code
+remains with Licensee. TO BE NEGOTIATED.] Nothing in this Agreement
+assigns any Licensor intellectual property to Licensee except the
+license rights expressly granted in Section 2.
+
+## 10. Trademarks
+
+This Agreement does not grant Licensee any right to use Licensor's
+trademarks, trade names, or logos (see `TRADEMARKS.md`), including but
+not limited to "ERRANT DIGITAL INSTITUTE OF TECHNOLOGY," "SEIT NGO,"
+"SNAPKITTY COLLECTIVE," and "SnapKitty." Any such use requires a
+separate, explicit written trademark license.
+
+## 11. Confidentiality
+
+Each Party may disclose confidential information to the other in
+connection with this Agreement. The receiving Party shall use the
+disclosing Party's confidential information solely to exercise its
+rights and perform its obligations under this Agreement, and shall
+protect it using at least the same degree of care it uses for its own
+confidential information of similar nature, but no less than a
+reasonable degree of care. [Standard exclusions (already public,
+independently developed, rightfully received from a third party,
+required to be disclosed by law) and duration of the confidentiality
+obligation TO BE NEGOTIATED.]
+
+## 12. Term and Termination
+
+### 12.1 Term
+
+This Agreement begins on the Effective Date and continues for
+[INITIAL TERM], [automatically renewing for successive
+[RENEWAL PERIOD] terms unless either Party gives notice of
+non-renewal at least [NOTICE PERIOD] before the end of the
+then-current term].
+
+### 12.2 Termination for cause
+
+Either Party may terminate this Agreement if the other Party
+materially breaches it and fails to cure such breach within [CURE
+PERIOD] after written notice.
+
+### 12.3 Effect of termination
+
+Upon termination or expiration, all licenses granted under Section 2
+terminate, and Licensee shall [cease use of the Software and destroy
+or return all copies / TERMS TO BE NEGOTIATED], except that Licensee
+may retain copies as required for archival, backup, or legal-compliance
+purposes, and Sections [LIST SURVIVING SECTIONS, e.g., 6-11, 13-15]
+survive termination.
+
+## 13. Governing Law; Dispute Resolution
+
+This Agreement is governed by the laws of [GOVERNING LAW JURISDICTION
+-- NOT YET DETERMINED; see the repository's licensing documentation],
+without regard to its conflict-of-laws principles. [Venue, arbitration,
+or other dispute-resolution terms TO BE NEGOTIATED.]
+
+## 14. Commercial Authorization
+
+Each Party represents that the individual signing this Agreement on
+its behalf is duly authorized to bind that Party to its terms.
+
+## 15. General Provisions
+
+- **Entire Agreement.** This Agreement, including its Exhibits, is the
+  entire agreement between the Parties regarding its subject matter
+  and supersedes all prior discussions on that subject.
+- **Amendment.** This Agreement may be amended only by a written
+  instrument signed by both Parties.
+- **Assignment.** Neither Party may assign this Agreement without the
+  other's prior written consent, except to a successor in a merger,
+  acquisition, or sale of substantially all assets. [TO BE
+  NEGOTIATED.]
+- **Severability.** If any provision of this Agreement is held
+  unenforceable, the remaining provisions remain in full force and
+  effect.
+- **Notices.** Notices under this Agreement shall be sent to the
+  addresses in the preamble, or to such other address as either Party
+  designates in writing.
+
+## Exhibit A: The Software
+
+[Identify the specific repository, crates, versions, or components
+licensed under this Agreement.]
+
+## Exhibit B: Scope of Authorized Use
+
+[Describe the specific deployment scope: number of environments,
+products, end users, geographic scope, field-of-use restrictions, if
+any.]
+
+## Exhibit C: Support and Fees
+
+[Support tier, response times, fee schedule, payment terms, invoicing
+and audit rights, if any.]
+
+
+SIGNATURE BLOCK (FOR AN ACTUALLY EXECUTED AGREEMENT ONLY)
+-----------------------------------------------------------------
+
+This template includes a signature block only to show where one would
+go on an executed agreement. Signing a copy of this template, as-is,
+without completing the bracketed terms and without legal review, does
+not create a valid or enforceable contract for either Party's
+intended purpose.
+
+LICENSOR:                              LICENSEE:
+
+ERRANT DIGITAL INSTITUTE OF            [LICENSEE LEGAL NAME]
+TECHNOLOGY (SEIT NGO)
+% SNAPKITTY COLLECTIVE
+
+By: _____________________________      By: _____________________________
+Name:                                  Name:
+Title:                                 Title:
+Date:                                  Date:
