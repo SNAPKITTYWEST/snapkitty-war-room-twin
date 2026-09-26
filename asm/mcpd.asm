@@ -1,3 +1,21 @@
+; SPDX-License-Identifier: AGPL-3.0-or-later
+;
+; ccgui-asm-bridge
+; Copyright (C) 2026 SnapKitty Collective
+;
+; This program is free software: you can redistribute it and/or modify
+; it under the terms of the GNU Affero General Public License as published
+; by the Free Software Foundation, either version 3 of the License, or
+; (at your option) any later version.
+;
+; This program is distributed in the hope that it will be useful,
+; but WITHOUT ANY WARRANTY; without even the implied warranty of
+; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+; GNU Affero General Public License for more details.
+;
+; You should have received a copy of the GNU Affero General Public License
+; along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 ; ============================================================================
 ; mcpd.asm — pure x86-64 assembly TCP MCP server. No libc, Linux syscalls only.
 ;
@@ -50,6 +68,10 @@ section .data
     t_identity:   db "bridge.identity",0
     t_policy:     db "bridge.policy_check",0
     t_exec:       db "bridge.exec",0
+    t_read:       db "bridge.read_file",0
+    t_write:      db "bridge.write_file",0
+    t_list:       db "bridge.list_dir",0
+    t_sysinfo:    db "bridge.system_info",0
 
     ; ---- JSON keys ----
     k_id:        db "id",0
@@ -60,6 +82,7 @@ section .data
     k_path:      db "path",0
     k_cmd:       db "command",0
     k_args:      db "args",0
+    k_content:   db "content",0
 
     ; ---- JSON fragments ----
     j_rpc_id:    db '{"jsonrpc":"2.0","id":',0
@@ -76,6 +99,25 @@ section .data
     pol_a:       db '{"verdict":"',0
     pol_b:       db '","path":"',0
     pol_c:       db '"}',0
+    read_a:      db '{"content":"',0
+    read_b:      db '","bytes":',0
+    write_a:     db '{"bytes":',0
+    write_b:     db ',"path":"',0
+    list_a:      db '{"path":"',0
+    list_b:      db '","entries":[',0
+    list_c:      db ']}',0
+    ent_a:       db '{"name":"',0
+    ent_b:       db '","type":"',0
+    ent_c:       db '"}',0
+    sys_a:       db '{"sysname":"',0
+    sys_b:       db '","nodename":"',0
+    sys_c:       db '","release":"',0
+    sys_d:       db '","version":"',0
+    sys_e:       db '","machine":"',0
+    e_io:        db "I/O error",0
+    t_file:      db "file",0
+    t_dir:       db "dir",0
+    t_other:     db "other",0
     exec_a:      db '{"stdout":"',0
     exec_b:      db '","exit_code":',0
     init_result: db '{"protocolVersion":"2024-11-05","capabilities":{"tools":{}},"serverInfo":{"name":"mcpd-asm","version":"0.1.0"}}',0
@@ -84,7 +126,11 @@ section .data
     tl_a: db '{"tools":[{"name":"bridge.echo","description":"Echo back the arguments object","inputSchema":{"type":"object"}},',0
     tl_b: db '{"name":"bridge.identity","description":"Report server identity and configuration","inputSchema":{"type":"object"}},',0
     tl_c: db '{"name":"bridge.policy_check","description":"Permission gate ported from ai-bridge permission-safety.js: tmp-path rewrite, root containment, dangerous-path screen","inputSchema":{"type":"object","required":["path"],"properties":{"path":{"type":"string"}}}},',0
-    tl_d: db '{"name":"bridge.exec","description":"Execute a command with every argument passed through the permission gate","inputSchema":{"type":"object","required":["command"],"properties":{"command":{"type":"string"},"args":{"type":"array","items":{"type":"string"}}}}}]}',0
+    tl_d: db '{"name":"bridge.exec","description":"Execute a command with every argument passed through the permission gate","inputSchema":{"type":"object","required":["command"],"properties":{"command":{"type":"string"},"args":{"type":"array","items":{"type":"string"}}}}},',0
+    tl_e: db '{"name":"bridge.read_file","description":"Read a file through the permission gate","inputSchema":{"type":"object","required":["path"],"properties":{"path":{"type":"string"}}}},',0
+    tl_f: db '{"name":"bridge.write_file","description":"Write a file through the permission gate","inputSchema":{"type":"object","required":["path","content"],"properties":{"path":{"type":"string"},"content":{"type":"string"}}}},',0
+    tl_g: db '{"name":"bridge.list_dir","description":"List a directory through the permission gate","inputSchema":{"type":"object","required":["path"],"properties":{"path":{"type":"string"}}}},',0
+    tl_h: db '{"name":"bridge.system_info","description":"Report kernel and machine information","inputSchema":{"type":"object"}}]}',0
 
     ; ---- errors / verdicts ----
     e_parse:    db "Parse error",0
@@ -166,6 +212,11 @@ section .bss
     conn_fd:     resq 1
     port_num:    resq 1
     envp_empty:  resq 1
+    file_buf:    resb 65536
+    file_len:    resq 1
+    dent_buf:    resb 32768
+    path_nt:     resb 8192
+    uname_buf:   resb 390
 
 section .text
 global _start
@@ -867,6 +918,14 @@ h_tools_list:
     lea rdi, [tl_c]
     call out_str
     lea rdi, [tl_d]
+    call out_str
+    lea rdi, [tl_e]
+    call out_str
+    lea rdi, [tl_f]
+    call out_str
+    lea rdi, [tl_g]
+    call out_str
+    lea rdi, [tl_h]
     call out_str
     jmp resp_end
 
@@ -1675,6 +1734,425 @@ h_call_exec:
     pop rbx
     ret
 ; ============================================================================
+; ============================================================================
+; bridge.read_file / bridge.write_file / bridge.list_dir / bridge.system_info
+; ============================================================================
+
+; nullterm_final_path: copy final_path[0..final_path_len] to path_nt + NUL
+; clobbers rax, rdi, rsi, rdx
+nullterm_final_path:
+    lea rdi, [path_nt]
+    lea rsi, [final_path]
+    mov rdx, [final_path_len]
+    call memcpy
+    mov rax, [final_path_len]
+    mov byte [path_nt+rax], 0
+    ret
+
+; blocked_44001: emit {"error":{"code":44001,"message":"Policy blocked: <final_path>"}}
+; uses current id_buf/id_len
+blocked_44001:
+    call out_reset
+    lea rdi, [j_rpc_id]
+    call out_str
+    mov rdi, id_buf
+    mov rsi, [id_len]
+    call out_mem
+    lea rdi, [j_err_pfx]
+    call out_str
+    mov rax, 44001
+    call out_i64
+    lea rdi, [j_msg_pfx]
+    call out_str
+    lea rdi, [e_blk_pfx]
+    call out_str
+    mov rdi, final_path
+    mov rsi, [final_path_len]
+    call out_esc
+    lea rdi, [j_msg_sfx]
+    call out_str
+    ret
+
+; extract_path_arg -> rax=1 ok (r12=len, tmp_str has path, r13=args end), rax=0 bad
+; clobbers rdi, rsi, rdx
+extract_path_arg:
+    cmp qword [args_start], 0
+    je .bad
+    mov rdi, [args_start]
+    mov rsi, [args_len]
+    mov r13, rdi
+    add r13, rsi
+    lea rdx, [k_path]
+    call find_key
+    test rax, rax
+    jz .bad
+    mov rdi, rax
+    mov rsi, r13
+    lea rdx, [tmp_str]
+    mov rcx, 8191
+    call extract_string
+    test rax, rax
+    jz .bad
+    mov r12, rdx
+    mov rax, 1
+    ret
+.bad:
+    xor rax, rax
+    ret
+
+; gate_path: policy_check tmp_str[r12], -> rax=verdict (0 ok,1 rewritten,2 blocked)
+; on blocked, final_path holds culprit
+gate_path:
+    lea rdi, [tmp_str]
+    mov rsi, r12
+    call policy_check
+    ret
+
+; ---- bridge.read_file ----
+h_call_read:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    call extract_path_arg
+    test rax, rax
+    jz .badparams
+    call gate_path
+    cmp rax, 2
+    je .blocked
+    call nullterm_final_path
+    mov rax, 257            ; openat
+    mov rdi, -100           ; AT_FDCWD
+    lea rsi, [path_nt]
+    xor rdx, rdx            ; O_RDONLY
+    syscall
+    cmp rax, 0
+    jl .ioerr
+    mov r14, rax            ; fd
+    xor rbx, rbx            ; total
+.rl:
+    cmp rbx, 65535
+    jge .done
+    mov rax, 0              ; read
+    mov rdi, r14
+    lea rsi, [file_buf+rbx]
+    mov rdx, 65535
+    sub rdx, rbx
+    syscall
+    cmp rax, 0
+    jle .done
+    add rbx, rax
+    jmp .rl
+.done:
+    mov [file_len], rbx
+    mov rax, 3              ; close
+    mov rdi, r14
+    syscall
+    call resp_result_begin
+    lea rdi, [read_a]
+    call out_str
+    mov rdi, file_buf
+    mov rsi, rbx
+    call out_esc
+    lea rdi, [read_b]
+    call out_str
+    mov rax, rbx
+    call out_u64
+    lea rdi, [j_close]
+    call out_str
+    call resp_end
+    jmp .out
+.blocked:
+    call blocked_44001
+    jmp .out
+.ioerr:
+    mov rdi, -32603
+    lea rsi, [e_io]
+    call resp_error
+    jmp .out
+.badparams:
+    mov rdi, -32602
+    lea rsi, [e_bad_params]
+    call resp_error
+.out:
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; ---- bridge.write_file ----
+h_call_write:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    call extract_path_arg
+    test rax, rax
+    jz .badparams
+    mov r15, r12            ; save path len (r12 gets clobbered)
+    ; extract content string -> file_buf
+    mov rdi, [args_start]
+    mov rsi, [args_len]
+    lea rdx, [k_content]
+    call find_key
+    test rax, rax
+    jz .badparams
+    mov rdi, rax
+    ; r13 still = args end from extract_path_arg
+    mov rsi, r13
+    lea rdx, [file_buf]
+    mov rcx, 60000
+    call extract_string
+    test rax, rax
+    jz .badparams
+    mov r14, rdx            ; content len
+    ; restore path into tmp_str for gating (extract_string overwrote tmp_str? no, used file_buf)
+    mov r12, r15
+    call gate_path
+    cmp rax, 2
+    je .blocked
+    call nullterm_final_path
+    mov rax, 257            ; openat
+    mov rdi, -100
+    lea rsi, [path_nt]
+    mov rdx, 577            ; O_WRONLY|O_CREAT|O_TRUNC = 1+64+512
+    mov r10, 420            ; 0644
+    syscall
+    cmp rax, 0
+    jl .ioerr
+    mov r15, rax            ; fd
+    xor rbx, rbx            ; written
+.wl:
+    cmp rbx, r14
+    jge .wdone
+    mov rax, 1              ; write
+    mov rdi, r15
+    lea rsi, [file_buf+rbx]
+    mov rdx, r14
+    sub rdx, rbx
+    syscall
+    cmp rax, 0
+    jle .werr
+    add rbx, rax
+    jmp .wl
+.wdone:
+    mov rax, 3
+    mov rdi, r15
+    syscall
+    call resp_result_begin
+    lea rdi, [write_a]
+    call out_str
+    mov rax, rbx
+    call out_u64
+    lea rdi, [write_b]
+    call out_str
+    mov rdi, final_path
+    mov rsi, [final_path_len]
+    call out_esc
+    lea rdi, [pol_c]
+    call out_str
+    call resp_end
+    jmp .out
+.werr:
+    mov rax, 3
+    mov rdi, r15
+    syscall
+.ioerr:
+    mov rdi, -32603
+    lea rsi, [e_io]
+    call resp_error
+    jmp .out
+.blocked:
+    call blocked_44001
+    jmp .out
+.badparams:
+    mov rdi, -32602
+    lea rsi, [e_bad_params]
+    call resp_error
+.out:
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; ---- bridge.list_dir ----
+h_call_list:
+    push rbx
+    push r12
+    push r13
+    push r14
+    push r15
+    call extract_path_arg
+    test rax, rax
+    jz .badparams
+    call gate_path
+    cmp rax, 2
+    je .blocked
+    call nullterm_final_path
+    mov rax, 257            ; openat
+    mov rdi, -100
+    lea rsi, [path_nt]
+    mov rdx, 65536          ; O_DIRECTORY
+    xor r10, r10
+    syscall
+    cmp rax, 0
+    jl .ioerr
+    mov r14, rax            ; fd
+    call resp_result_begin
+    lea rdi, [list_a]
+    call out_str
+    mov rdi, final_path
+    mov rsi, [final_path_len]
+    call out_esc
+    lea rdi, [list_b]
+    call out_str
+    xor r15, r15            ; first-entry flag (0 = first)
+.dl:
+    mov rax, 217            ; getdents64
+    mov rdi, r14
+    lea rsi, [dent_buf]
+    mov rdx, 32768
+    syscall
+    cmp rax, 0
+    jle .ddone
+    mov rbx, rax            ; bytes
+    lea r12, [dent_buf]     ; cursor
+    lea r13, [dent_buf+rbx] ; end
+.el:
+    cmp r12, r13
+    jge .dl
+    movzx eax, word [r12+16] ; d_reclen
+    test rax, rax
+    jz .dl                  ; safety
+    mov r10, r12
+    add r10, rax            ; next = cursor + reclen ; save
+    lea rdi, [r12+19]       ; d_name
+    ; skip "." and ".."
+    cmp byte [rdi], '.'
+    jne .emit
+    cmp byte [rdi+1], 0
+    je .next
+    cmp byte [rdi+1], '.'
+    jne .emit
+    cmp byte [rdi+2], 0
+    je .next
+.emit:
+    cmp r15, 0
+    je .nofirst
+    mov al, ','
+    call out_c
+.nofirst:
+    mov r15, 1
+    lea rdi, [ent_a]
+    call out_str
+    lea rdi, [r12+19]
+    call out_str_esc_cstr   ; name (null-terminated, escaped)
+    lea rdi, [ent_b]
+    call out_str
+    movzx eax, byte [r12+18] ; d_type
+    cmp al, 4
+    je .isdir
+    cmp al, 8
+    je .isfile
+    lea rdi, [t_other]
+    jmp .dtype_done
+.isdir:
+    lea rdi, [t_dir]
+    jmp .dtype_done
+.isfile:
+    lea rdi, [t_file]
+.dtype_done:
+    call out_str
+    lea rdi, [ent_c]
+    call out_str
+.next:
+    mov r12, r10
+    jmp .el
+.ddone:
+    mov rax, 3
+    mov rdi, r14
+    syscall
+    lea rdi, [list_c]
+    call out_str
+    call resp_end
+    jmp .out
+.blocked:
+    call blocked_44001
+    jmp .out
+.ioerr:
+    mov rdi, -32603
+    lea rsi, [e_io]
+    call resp_error
+    jmp .out
+.badparams:
+    mov rdi, -32602
+    lea rsi, [e_bad_params]
+    call resp_error
+.out:
+    pop r15
+    pop r14
+    pop r13
+    pop r12
+    pop rbx
+    ret
+
+; out_str_esc_cstr(rdi=cstr): output escaped null-terminated string
+out_str_esc_cstr:
+    push rdi
+    call strlen             ; rax = len
+    mov rsi, rax
+    pop rdi
+    jmp out_esc
+
+; ---- bridge.system_info ----
+h_call_sysinfo:
+    push rbx
+    push r12
+    mov rax, 63             ; uname
+    lea rdi, [uname_buf]
+    syscall
+    cmp rax, 0
+    jl .ioerr
+    call resp_result_begin
+    lea rdi, [sys_a]
+    call out_str
+    lea rdi, [uname_buf]
+    call out_str_esc_cstr
+    lea rdi, [sys_b]
+    call out_str
+    lea rdi, [uname_buf+65]
+    call out_str_esc_cstr
+    lea rdi, [sys_c]
+    call out_str
+    lea rdi, [uname_buf+130]
+    call out_str_esc_cstr
+    lea rdi, [sys_d]
+    call out_str
+    lea rdi, [uname_buf+195]
+    call out_str_esc_cstr
+    lea rdi, [sys_e]
+    call out_str
+    lea rdi, [uname_buf+260]
+    call out_str_esc_cstr
+    lea rdi, [pol_c]
+    call out_str
+    call resp_end
+    jmp .out
+.ioerr:
+    mov rdi, -32603
+    lea rsi, [e_io]
+    call resp_error
+.out:
+    pop r12
+    pop rbx
+    ret
+
 ; tools/call dispatcher
 ; ============================================================================
 h_tools_call:
@@ -1758,6 +2236,30 @@ h_tools_call:
     call streq
     test rax, rax
     jnz .exec
+    lea rdx, [t_read]
+    mov rdi, name_buf
+    mov rsi, [name_len]
+    call streq
+    test rax, rax
+    jnz .read
+    lea rdx, [t_write]
+    mov rdi, name_buf
+    mov rsi, [name_len]
+    call streq
+    test rax, rax
+    jnz .write
+    lea rdx, [t_list]
+    mov rdi, name_buf
+    mov rsi, [name_len]
+    call streq
+    test rax, rax
+    jnz .list
+    lea rdx, [t_sysinfo]
+    mov rdi, name_buf
+    mov rsi, [name_len]
+    call streq
+    test rax, rax
+    jnz .sysinfo
     mov rdi, -32602
     lea rsi, [e_no_tool]
     call resp_error
@@ -1773,6 +2275,18 @@ h_tools_call:
     jmp .out
 .exec:
     call h_call_exec
+    jmp .out
+.read:
+    call h_call_read
+    jmp .out
+.write:
+    call h_call_write
+    jmp .out
+.list:
+    call h_call_list
+    jmp .out
+.sysinfo:
+    call h_call_sysinfo
     jmp .out
 .badparams:
     mov rdi, -32602

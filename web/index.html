@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<!--
+SPDX-License-Identifier: AGPL-3.0-or-later
+ccgui-asm-bridge
+Copyright (C) 2026 SnapKitty Collective
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published
+by the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+-->
+
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>mcpd-asm — War Room</title>
+<style>
+  :root {
+    --bg: #0d1117; --panel: #161b22; --border: #30363d;
+    --fg: #e6edf3; --dim: #8b949e; --green: #3fb950;
+    --blue: #79c0ff; --orange: #ffa657; --red: #ff7b72;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--fg); font-family: -apple-system, sans-serif; }
+  header { background: var(--panel); border-bottom: 1px solid var(--border);
+           padding: 12px 20px; display: flex; align-items: center; gap: 12px; }
+  header h1 { font-size: 18px; font-weight: 600; }
+  header h1 span { color: var(--green); font-family: monospace; }
+  #status { margin-left: auto; font-size: 13px; display: flex; gap: 16px; align-items: center; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .dot.on { background: var(--green); box-shadow: 0 0 8px var(--green); }
+  .dot.off { background: var(--red); }
+  nav { background: var(--panel); border-bottom: 1px solid var(--border);
+        padding: 0 20px; display: flex; gap: 4px; }
+  nav button { background: none; border: none; color: var(--dim); padding: 12px 16px;
+               cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; }
+  nav button.active { color: var(--fg); border-bottom-color: var(--green); }
+  nav button:hover { color: var(--fg); }
+  main { padding: 20px; max-width: 1200px; margin: 0 auto; }
+  .view { display: none; }
+  .view.active { display: block; }
+  .card { background: var(--panel); border: 1px solid var(--border); border-radius: 8px;
+          padding: 16px; margin-bottom: 16px; }
+  .card h2 { font-size: 16px; margin-bottom: 12px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+  .tool-card { background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+               padding: 12px; cursor: pointer; transition: border-color .15s; }
+  .tool-card:hover { border-color: var(--green); }
+  .tool-card h3 { font-family: monospace; font-size: 14px; color: var(--blue); margin-bottom: 6px; }
+  .tool-card p { font-size: 13px; color: var(--dim); }
+  .tool-card .src { font-size: 11px; color: var(--dim); margin-top: 8px; }
+  .tool-card .src.asm { color: var(--green); }
+  .tool-card .src.bridge { color: var(--orange); }
+  pre.json { background: #010409; border: 1px solid var(--border); border-radius: 6px;
+             padding: 12px; overflow-x: auto; font-family: monospace; font-size: 13px;
+             white-space: pre-wrap; word-break: break-word; }
+  .k { color: var(--blue); } .s { color: #a5d6ff; } .n { color: var(--orange); }
+  textarea, input[type=text] { width: 100%; background: #010409; border: 1px solid var(--border);
+             border-radius: 6px; color: var(--fg); padding: 10px; font-family: monospace;
+             font-size: 13px; }
+  textarea { min-height: 120px; resize: vertical; }
+  button.go { background: #238636; color: #fff; border: none; border-radius: 6px;
+              padding: 10px 20px; font-size: 14px; cursor: pointer; margin-top: 10px; }
+  button.go:hover { background: #2ea043; }
+  button.go:disabled { background: var(--border); cursor: wait; }
+  #filelist { list-style: none; }
+  #filelist li { padding: 8px 12px; border-bottom: 1px solid var(--border); cursor: pointer;
+                 font-family: monospace; font-size: 13px; display: flex; gap: 10px; }
+  #filelist li:hover { background: var(--bg); }
+  #filelist .dir { color: var(--blue); } #filelist .file { color: var(--fg); }
+  #chatlog { height: 400px; overflow-y: auto; border: 1px solid var(--border);
+             border-radius: 6px; padding: 12px; background: #010409; margin-bottom: 12px; }
+  .msg { margin-bottom: 12px; }
+  .msg .who { font-size: 12px; color: var(--dim); margin-bottom: 4px; }
+  .msg.user .who { color: var(--blue); }
+  .msg.bot .who { color: var(--green); }
+  .msg .text { font-size: 14px; line-height: 1.5; }
+  #chatrow { display: flex; gap: 8px; }
+  #chatrow input { flex: 1; }
+  #chatrow button { margin-top: 0; white-space: nowrap; }
+  .term { background: #010409; border: 1px solid var(--border); border-radius: 6px;
+          padding: 12px; font-family: monospace; font-size: 13px; height: 400px;
+          overflow-y: auto; margin-bottom: 12px; }
+  .term .in { color: var(--green); } .term .out { color: var(--dim); }
+  .stat { display: flex; justify-content: space-between; padding: 8px 0;
+          border-bottom: 1px solid var(--border); font-size: 14px; }
+  .stat:last-child { border: none; }
+  .stat .v { font-family: monospace; color: var(--blue); }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>mcpd-asm</span> war room</h1>
+  <div id="status">
+    <span><span class="dot off" id="wsdot"></span><span id="wslabel">disconnected</span></span>
+    <span><span class="dot off" id="mcpdot"></span><span id="mcplabel">mcpd ?</span></span>
+  </div>
+</header>
+<nav>
+  <button class="active" data-v="dash">Dashboard</button>
+  <button data-v="tools">Tools</button>
+  <button data-v="files">Files</button>
+  <button data-v="chat">Chat</button>
+  <button data-v="term">Console</button>
+</nav>
+<main>
+  <!-- DASHBOARD -->
+  <div class="view active" id="v-dash">
+    <div class="card"><h2>Server</h2><div id="dashstats"></div></div>
+    <div class="card"><h2>Tool registry</h2><div class="grid" id="dashtools"></div></div>
+  </div>
+  <!-- TOOLS -->
+  <div class="view" id="v-tools">
+    <div class="card">
+      <h2>Tool playground</h2>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <select id="toolsel" style="flex:1;background:#010409;color:var(--fg);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:monospace"></select>
+      </div>
+      <label style="font-size:13px;color:var(--dim)">Arguments (JSON)</label>
+      <textarea id="toolargs" spellcheck="false">{}</textarea>
+      <button class="go" id="toolgo">Call tool</button>
+    </div>
+    <div class="card"><h2>Response</h2><pre class="json" id="toolout">// pick a tool and hit Call</pre></div>
+  </div>
+  <!-- FILES -->
+  <div class="view" id="v-files">
+    <div class="card">
+      <h2>File browser <span style="font-size:12px;color:var(--dim)" id="cwd"></span></h2>
+      <ul id="filelist"></ul>
+    </div>
+    <div class="card" id="fileview" style="display:none">
+      <h2 id="fname"></h2>
+      <pre class="json" id="fcontent"></pre>
+      <div style="margin-top:12px">
+        <textarea id="fedit" spellcheck="false" style="min-height:200px"></textarea>
+        <button class="go" id="fsave">Save via bridge.write_file</button>
+      </div>
+    </div>
+  </div>
+  <!-- CHAT -->
+  <div class="view" id="v-chat">
+    <div class="card">
+      <h2>Chat <span style="font-size:12px;color:var(--dim)">via bridge.generate → glm-evoke</span></h2>
+      <div id="chatlog"></div>
+      <div id="chatrow">
+        <input type="text" id="chatin" placeholder="Type a message…" autocomplete="off">
+        <button class="go" id="chatsend">Send</button>
+      </div>
+    </div>
+  </div>
+  <!-- CONSOLE -->
+  <div class="view" id="v-term">
+    <div class="card">
+      <h2>Raw JSON-RPC console</h2>
+      <div class="term" id="termlog"></div>
+      <div style="display:flex;gap:8px">
+        <input type="text" id="termin" placeholder='{"jsonrpc":"2.0","id":1,"method":"ping"}' autocomplete="off" spellcheck="false">
+        <button class="go" id="termsend" style="margin-top:0">Send</button>
+      </div>
+    </div>
+  </div>
+</main>
+<script>
+const WS_URL = (location.protocol === "https:" ? "wss://" : "ws://") + location.hostname + ":8765";
+let ws = null, reqId = 1;
+const pending = new Map();
+
+function hljson(obj) {
+  let s = typeof obj === "string" ? obj : JSON.stringify(obj, null, 1);
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;")
+    .replace(/"([^"]*)":/g, '<span class="k">"$1"</span>:')
+    .replace(/: "([^"]*)"/g, ': <span class="s">"$1"</span>')
+    .replace(/: (\d+)/g, ': <span class="n">$1</span>');
+}
+function setWs(on) {
+  document.getElementById("wsdot").className = "dot " + (on ? "on" : "off");
+  document.getElementById("wslabel").textContent = on ? "ws connected" : "disconnected";
+}
+function setMcp(on, info) {
+  document.getElementById("mcpdot").className = "dot " + (on ? "on" : "off");
+  document.getElementById("mcplabel").textContent = on ? ("mcpd " + (info||"")) : "mcpd ?";
+}
+function rpc(method, params) {
+  return new Promise((res, rej) => {
+    const id = reqId++;
+    pending.set(id, {res, rej});
+    ws.send(JSON.stringify({jsonrpc:"2.0", id, method, params}));
+    setTimeout(() => { if (pending.has(id)) { pending.delete(id); rej(new Error("timeout")); } }, 15000);
+  });
+}
+function connect() {
+  ws = new WebSocket(WS_URL);
+  ws.onopen = async () => {
+    setWs(true);
+    try {
+      const r = await rpc("tools/call", {name:"bridge.identity", arguments:{}});
+      setMcp(true, r.result && r.result.version);
+      await refreshTools();
+      await loadDir(".");
+      dashStats(r.result);
+    } catch(e) { setMcp(false); }
+  };
+  ws.onclose = () => { setWs(false); setMcp(false); setTimeout(connect, 3000); };
+  ws.onmessage = (ev) => {
+    let m; try { m = JSON.parse(ev.data); } catch(e) { return; }
+    if (m.id != null && pending.has(m.id)) {
+      const {res} = pending.get(m.id); pending.delete(m.id); res(m);
+    }
+  };
+}
+// nav
+document.querySelectorAll("nav button").forEach(b => b.onclick = () => {
+  document.querySelectorAll("nav button").forEach(x => x.classList.remove("active"));
+  document.querySelectorAll(".view").forEach(x => x.classList.remove("active"));
+  b.classList.add("active");
+  document.getElementById("v-" + b.dataset.v).classList.add("active");
+});
+// dashboard
+let allTools = [];
+async function refreshTools() {
+  const r = await rpc("tools/list");
+  allTools = (r.result && r.result.tools) || [];
+  const g = document.getElementById("dashtools"); g.innerHTML = "";
+  const sel = document.getElementById("toolsel"); sel.innerHTML = "";
+  allTools.forEach(t => {
+    const asm = !t.name.startsWith("bridge.web_") && !t.name.startsWith("bridge.gen");
+    const d = document.createElement("div"); d.className = "tool-card";
+    d.innerHTML = `<h3>${t.name}</h3><p>${t.description||""}</p>
+      <div class="src ${asm?"asm":"bridge"}">${asm?"x86-64 · raw syscalls":"ws-bridge · python"}</div>`;
+    d.onclick = () => {
+      document.querySelector('[data-v="tools"]').click();
+      sel.value = t.name;
+      document.getElementById("toolargs").value = "{}";
+    };
+    g.appendChild(d);
+    const o = document.createElement("option"); o.value = t.name; o.textContent = t.name;
+    sel.appendChild(o);
+  });
+}
+function dashStats(ident) {
+  const el = document.getElementById("dashstats");
+  const rows = [
+    ["binary", (ident && ident.name) + " " + (ident && ident.version)],
+    ["transport", "tcp · newline-delimited JSON-RPC 2.0"],
+    ["arch", ident && ident.arch], ["syscalls", ident && ident.syscalls],
+    ["policy root", ident && ident.root],
+    ["tools", allTools.length + " (8 asm + 2 bridge)"],
+  ];
+  el.innerHTML = rows.map(([k,v]) => `<div class="stat"><span>${k}</span><span class="v">${v||"—"}</span></div>`).join("");
+}
+// tool playground
+document.getElementById("toolgo").onclick = async () => {
+  const btn = document.getElementById("toolgo"); btn.disabled = true;
+  const name = document.getElementById("toolsel").value;
+  let args = {};
+  try { args = JSON.parse(document.getElementById("toolargs").value || "{}"); }
+  catch(e) { document.getElementById("toolout").textContent = "bad JSON: " + e; btn.disabled = false; return; }
+  try {
+    const r = await rpc("tools/call", {name, arguments: args});
+    document.getElementById("toolout").innerHTML = hljson(r.result !== undefined ? r.result : r.error);
+  } catch(e) { document.getElementById("toolout").textContent = "error: " + e; }
+  btn.disabled = false;
+};
+// files
+let cwd = ".";
+async function loadDir(path) {
+  cwd = path;
+  document.getElementById("cwd").textContent = "— " + path;
+  const r = await rpc("tools/call", {name:"bridge.list_dir", arguments:{path}});
+  const ul = document.getElementById("filelist"); ul.innerHTML = "";
+  const res = r.result || {};
+  if (path !== ".") {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="dir">📁 ..</span>`;
+    li.onclick = () => loadDir(path.split("/").slice(0,-1).join("/") || ".");
+    ul.appendChild(li);
+  }
+  (res.entries || []).forEach(e => {
+    const li = document.createElement("li");
+    const isDir = e.type === "dir";
+    li.innerHTML = `<span class="${isDir?"dir":"file"}">${isDir?"📁":"📄"} ${e.name}</span>`;
+    li.onclick = () => {
+      const p = (path === "." ? "" : path + "/") + e.name;
+      if (isDir) loadDir(p); else openFile(p);
+    };
+    ul.appendChild(li);
+  });
+}
+let curFile = null;
+async function openFile(path) {
+  curFile = path;
+  const r = await rpc("tools/call", {name:"bridge.read_file", arguments:{path}});
+  document.getElementById("fileview").style.display = "block";
+  document.getElementById("fname").textContent = path;
+  const c = (r.result && r.result.content) || JSON.stringify(r.error || r);
+  document.getElementById("fcontent").textContent = c.slice(0, 4000);
+  document.getElementById("fedit").value = c;
+}
+document.getElementById("fsave").onclick = async () => {
+  const content = document.getElementById("fedit").value;
+  const r = await rpc("tools/call", {name:"bridge.write_file",
+    arguments:{path: curFile, content}});
+  alert(r.result ? `wrote ${r.result.bytes} bytes` : JSON.stringify(r.error));
+  openFile(curFile);
+};
+// chat
+function chatMsg(who, text, cls) {
+  const log = document.getElementById("chatlog");
+  const d = document.createElement("div"); d.className = "msg " + cls;
+  d.innerHTML = `<div class="who">${who}</div><div class="text"></div>`;
+  d.querySelector(".text").textContent = text;
+  log.appendChild(d); log.scrollTop = log.scrollHeight;
+}
+async function sendChat() {
+  const inp = document.getElementById("chatin");
+  const text = inp.value.trim(); if (!text) return;
+  inp.value = "";
+  chatMsg("you", text, "user");
+  chatMsg("mcpd", "…", "bot");
+  const log = document.getElementById("chatlog");
+  try {
+    const r = await rpc("tools/call", {name:"bridge.generate",
+      arguments:{prompt: text, max_tokens: 32}});
+    log.lastChild.querySelector(".text").textContent =
+      r.result.status === "ok" ? JSON.stringify(r.result)
+      : `[evoke ${r.result.status}] ${r.result.hint || ""}`;
+  } catch(e) {
+    log.lastChild.querySelector(".text").textContent = "error: " + e;
+  }
+}
+document.getElementById("chatsend").onclick = sendChat;
+document.getElementById("chatin").onkeydown = e => { if (e.key === "Enter") sendChat(); };
+// console
+function termLog(dir, text) {
+  const el = document.getElementById("termlog");
+  const d = document.createElement("div"); d.className = dir;
+  d.textContent = (dir === "in" ? "→ " : "← ") + text;
+  el.appendChild(d); el.scrollTop = el.scrollHeight;
+}
+document.getElementById("termsend").onclick = async () => {
+  const inp = document.getElementById("termin");
+  const text = inp.value.trim(); if (!text) return;
+  termLog("in", text);
+  inp.value = "";
+  try {
+    const m = JSON.parse(text);
+    const id = reqId++;
+    const p = new Promise((res, rej) => {
+      pending.set(id, {res, rej});
+      setTimeout(() => { pending.delete(id); rej(new Error("timeout")); }, 15000);
+    });
+    m.id = id; ws.send(JSON.stringify(m));
+    const r = await p;
+    termLog("out", JSON.stringify(r.result !== undefined ? r.result : r.error));
+  } catch(e) { termLog("out", "error: " + e.message); }
+};
+connect();
+</script>
+</body>
+</html>

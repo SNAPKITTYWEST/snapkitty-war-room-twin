@@ -1,4 +1,22 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# ccgui-asm-bridge
+# Copyright (C) 2026 SnapKitty Collective
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 """PyTorch harness for mcpd-asm (ccgui-asm-bridge).
 
 Spins up the pure-assembly TCP MCP server, runs the full MCP protocol suite
@@ -69,6 +87,8 @@ def main():
     staged = os.path.join(ROOT, "echo")
     shutil.copy("/bin/echo", staged)
     os.chmod(staged, 0o755)
+    # work dir for bridge.write_file/read_file tests
+    os.makedirs(os.path.join(ROOT, "work"), exist_ok=True)
 
     srv = subprocess.Popen([BIN, str(PORT)], cwd=ROOT,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -90,7 +110,9 @@ def main():
         r = m.call("tools/list")
         names = {t["name"] for t in r.get("result", {}).get("tools", [])}
         check("tools/list", names == {"bridge.echo", "bridge.identity",
-                                      "bridge.policy_check", "bridge.exec"}, str(names))
+                                      "bridge.policy_check", "bridge.exec",
+                                      "bridge.read_file", "bridge.write_file",
+                                      "bridge.list_dir", "bridge.system_info"}, str(names))
 
         r = m.call("tools/call", {"name": "bridge.echo", "arguments": {"msg": "hello"}})
         check("bridge.echo", r.get("result", {}).get("echo", {}).get("msg") == "hello", str(r)[:120])
@@ -125,6 +147,30 @@ def main():
         r = m.call("tools/call", {"name": "bridge.exec",
                                   "arguments": {"command": "echo", "args": ["/etc/passwd"]}})
         check("exec.blocked-arg", r.get("error", {}).get("code") == 44001, str(r)[:120])
+
+        r = m.call("tools/call", {"name": "bridge.write_file",
+                                  "arguments": {"path": "work/harness.txt", "content": "harness-write-ok"}})
+        check("write_file", r.get("result", {}).get("bytes") == 16, str(r)[:120])
+
+        r = m.call("tools/call", {"name": "bridge.read_file",
+                                  "arguments": {"path": "work/harness.txt"}})
+        rr = r.get("result", {})
+        check("read_file", rr.get("content") == "harness-write-ok" and rr.get("bytes") == 16,
+              str(rr)[:120])
+
+        r = m.call("tools/call", {"name": "bridge.list_dir", "arguments": {"path": "."}})
+        lr = r.get("result", {})
+        check("list_dir", isinstance(lr.get("entries"), list) and len(lr["entries"]) > 0,
+              str(lr)[:120])
+
+        r = m.call("tools/call", {"name": "bridge.system_info", "arguments": {}})
+        sr = r.get("result", {})
+        check("system_info", sr.get("sysname") == "Linux" and sr.get("machine") == "x86_64",
+              str(sr)[:120])
+
+        r = m.call("tools/call", {"name": "bridge.write_file",
+                                  "arguments": {"path": "/etc/evil", "content": "x"}})
+        check("write_file.blocked", r.get("error", {}).get("code") == 44001, str(r)[:120])
 
         r = m.call("tools/call", {"name": "bridge.exec",
                                   "arguments": {"command": "/bin/echo", "args": ["hi"]}})
